@@ -27,26 +27,35 @@ type Message = {
 export function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
+  const [error, setError] = useState('');
   const conversationId = useRef(crypto.randomUUID());
-  const formRef = useRef<HTMLFormElement>(null);
+  const lastMessageRef = useRef<HTMLParagraphElement>(null);
   const { register, handleSubmit, reset, formState } = useForm<FormData>();
 
   useEffect(() => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth' });
+    lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   async function onSubmit({ prompt }: FormData) {
-    setMessages((prev) => [...prev, { content: prompt, role: 'user' }]);
-    setIsBotTyping(true);
-    reset();
+    try {
+      setMessages((prev) => [...prev, { content: prompt, role: 'user' }]);
+      setIsBotTyping(true);
+      setError('');
 
-    const { data } = await axios.post<ChatResponse>('/api/chat', {
-      prompt,
-      conversationId: conversationId.current,
-    });
+      reset({ prompt: '' });
 
-    setMessages((prev) => [...prev, { content: data.reply, role: 'bot' }]);
-    setIsBotTyping(false);
+      const { data } = await axios.post<ChatResponse>('/api/chat', {
+        prompt,
+        conversationId: conversationId.current,
+      });
+
+      setMessages((prev) => [...prev, { content: data.reply, role: 'bot' }]);
+    } catch (error) {
+      console.error('Error fetching chat response:', error);
+      setError('Something went wrong, try again!');
+    } finally {
+      setIsBotTyping(false);
+    }
   }
 
   function onKeyDownEnter(e: KeyboardEvent<HTMLFormElement>) {
@@ -66,11 +75,12 @@ export function ChatBot() {
   }
 
   return (
-    <div>
-      <div className="flex flex-col gap-3 mb-10">
+    <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 gap-3 mb-10 overflow-y-auto">
         {messages.map((message, index) => (
           <div
             className={`px-3 py-1 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-blue-600 text-white self-end' : 'bg-gray-100 text-black self-start'}`}
+            ref={index === messages.length - 1 ? lastMessageRef : null}
             key={index}
             onCopy={onCopyMessage}
           >
@@ -85,11 +95,12 @@ export function ChatBot() {
             <div className="w-2 h-2 rounded-full bg-gray-800 animate-pulse [animation-delay:0.4s]" />
           </div>
         )}
+
+        {error && <p className="text-red-500">{error}</p>}
       </div>
 
       <form
         className="flex flex-col gap-2 items-end border-2 p-4 rounded-lg"
-        ref={formRef}
         onSubmit={handleSubmit(onSubmit)}
         onKeyDown={onKeyDownEnter}
       >
@@ -97,6 +108,7 @@ export function ChatBot() {
           className="w-full border-0 focus:outline-0 resize-none"
           placeholder="Ask anything..."
           maxLength={1000}
+          autoFocus
           {...register('prompt', {
             required: true,
             validate: (str) => str.trim().length > 0,
