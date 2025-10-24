@@ -15,7 +15,7 @@ function App() {
   return (
     <main className="p-4">
       <p className="font-bold text-3xl">{message}</p>
-      <Button>Button</Button>
+      <Button>Button Component</Button>
     </main>
   );
 }
