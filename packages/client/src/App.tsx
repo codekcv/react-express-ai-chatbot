@@ -13,7 +13,7 @@ function App() {
 
   return (
     <main>
-      <p>{message}</p>
+      <p className="font-bold text-3xl p-4">{message}</p>
     </main>
   );
 }
