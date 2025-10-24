@@ -3,7 +3,13 @@ import { FaArrowUp } from 'react-icons/fa';
 import { Button } from './button';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from 'react';
 
 type FormData = {
   prompt: string;
@@ -22,7 +28,12 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isBotTyping, setIsBotTyping] = useState(false);
   const conversationId = useRef(crypto.randomUUID());
+  const formRef = useRef<HTMLFormElement>(null);
   const { register, handleSubmit, reset, formState } = useForm<FormData>();
+
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   async function onSubmit({ prompt }: FormData) {
     setMessages((prev) => [...prev, { content: prompt, role: 'user' }]);
@@ -38,10 +49,19 @@ export function ChatBot() {
     setIsBotTyping(false);
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLFormElement>) {
+  function onKeyDownEnter(e: KeyboardEvent<HTMLFormElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(onSubmit)();
+    }
+  }
+
+  function onCopyMessage(e: ClipboardEvent<HTMLDivElement>) {
+    const selection = window.getSelection()?.toString().trim();
+
+    if (selection) {
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', selection);
     }
   }
 
@@ -52,6 +72,7 @@ export function ChatBot() {
           <div
             className={`px-3 py-1 rounded-lg max-w-[80%] ${message.role === 'user' ? 'bg-blue-600 text-white self-end' : 'bg-gray-100 text-black self-start'}`}
             key={index}
+            onCopy={onCopyMessage}
           >
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
@@ -67,9 +88,10 @@ export function ChatBot() {
       </div>
 
       <form
-        onSubmit={handleSubmit(onSubmit)}
-        onKeyDown={onKeyDown}
         className="flex flex-col gap-2 items-end border-2 p-4 rounded-lg"
+        ref={formRef}
+        onSubmit={handleSubmit(onSubmit)}
+        onKeyDown={onKeyDownEnter}
       >
         <textarea
           className="w-full border-0 focus:outline-0 resize-none"
