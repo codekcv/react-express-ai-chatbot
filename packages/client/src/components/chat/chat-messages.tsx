@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ClipboardEvent } from 'react';
+import { type ClipboardEvent, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 export type Message = {
